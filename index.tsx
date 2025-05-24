@@ -1,5 +1,3 @@
-
-
 /* tslint:disable */
 /**
  * @license
@@ -23,8 +21,8 @@ export class GdmLiveAudio extends LitElement {
   @state() error = '';
   @state() systemPrompt: string | null = null;
 
-  private client: GoogleGenAI;
-  private session: Session;
+  private client!: GoogleGenAI;
+  private session!: Session;
   // Fix: Use standard AudioContext instead of webkitAudioContext
   private inputAudioContext = new (window.AudioContext ||
     (window as any).webkitAudioContext)({sampleRate: 16000});
@@ -34,9 +32,9 @@ export class GdmLiveAudio extends LitElement {
   @state() inputNode = this.inputAudioContext.createGain();
   @state() outputNode = this.outputAudioContext.createGain();
   private nextStartTime = 0;
-  private mediaStream: MediaStream;
-  private sourceNode: AudioBufferSourceNode;
-  private scriptProcessorNode: ScriptProcessorNode;
+  private mediaStream!: MediaStream;
+  private sourceNode!: MediaStreamAudioSourceNode;
+  private scriptProcessorNode!: ScriptProcessorNode;
   private sources = new Set<AudioBufferSourceNode>();
 
   static styles = css`
@@ -107,9 +105,9 @@ export class GdmLiveAudio extends LitElement {
       } else {
         this.updateError('System prompt not found in metadata.json.');
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Error loading system prompt:', e);
-      this.updateError(`Error loading system prompt: ${e.message}`);
+      this.updateError(`Error loading system prompt: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -121,9 +119,16 @@ export class GdmLiveAudio extends LitElement {
     this.initAudio();
     await this.loadSystemPrompt(); // Load prompt before initializing session
 
-    // Fix: Initialize GoogleGenAI with named apiKey parameter
+    // Check if API key is available
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      this.updateError('API key is missing. Please set the API_KEY environment variable.');
+      return; // Exit early if API key is missing
+    }
+
+    // Initialize GoogleGenAI with named apiKey parameter
     this.client = new GoogleGenAI({
-      apiKey: process.env.API_KEY,
+      apiKey: apiKey,
     });
 
     this.outputNode.connect(this.outputAudioContext.destination);
@@ -148,7 +153,7 @@ export class GdmLiveAudio extends LitElement {
           },
           onmessage: async (message: LiveServerMessage) => {
             const audio =
-              message.serverContent?.modelTurn?.parts[0]?.inlineData;
+              message.serverContent?.modelTurn?.parts?.[0]?.inlineData;
 
             if (audio) {
               this.nextStartTime = Math.max(
@@ -195,13 +200,13 @@ export class GdmLiveAudio extends LitElement {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Aoede'}}, // Corrected to female voice
-            // languageCode: 'en-US' // Example language code
+            languageCode: 'en-US' // Example language code
           },
         },
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to initialize session:', e);
-      this.updateError(`Failed to initialize session: ${e.message}`);
+      this.updateError(`Failed to initialize session: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -276,9 +281,9 @@ export class GdmLiveAudio extends LitElement {
 
       this.isRecording = true;
       this.updateStatus('🔴 Recording... Talk to Hana!');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error starting recording:', err);
-      this.updateStatus(`Error starting recording: ${err.message}`);
+      this.updateStatus(`Error starting recording: ${err instanceof Error ? err.message : String(err)}`);
       this.stopRecording();
     }
   }
@@ -295,17 +300,17 @@ export class GdmLiveAudio extends LitElement {
     if (this.scriptProcessorNode) {
       this.scriptProcessorNode.onaudioprocess = null; // Remove callback
       this.scriptProcessorNode.disconnect();
-      this.scriptProcessorNode = null;
+      this.scriptProcessorNode = undefined as unknown as ScriptProcessorNode;
     }
     
     if (this.sourceNode) {
       this.sourceNode.disconnect();
-      this.sourceNode = null;
+      this.sourceNode = undefined as unknown as MediaStreamAudioSourceNode;
     }
 
     if (this.mediaStream) {
       this.mediaStream.getTracks().forEach((track) => track.stop());
-      this.mediaStream = null;
+      this.mediaStream = undefined as unknown as MediaStream;
     }
     
     // It's good practice to suspend the audio context when not in use
@@ -406,4 +411,3 @@ export class GdmLiveAudio extends LitElement {
     `;
   }
 }
-// Fix: Removed invalid XML-like tags from the end of the file.

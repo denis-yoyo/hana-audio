@@ -8,7 +8,7 @@
 // tslint:dsiable:no-new-decorators
 
 import {LitElement, css, html} from 'lit';
-import {customElement, property} from 'lit/decorators';
+import {customElement, property} from 'lit/decorators.js';
 import {Analyser} from './analyser';
 
 import * as THREE from 'three';
@@ -30,7 +30,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private outputAnalyser!: Analyser;
   private camera!: THREE.PerspectiveCamera;
   private backdrop!: THREE.Mesh;
-  private composer!: EffectComposer;
+  private composer!: any;
   private sphere!: THREE.Mesh;
   private prevTime = 0;
   private rotation = new THREE.Vector3(0, 0, 0);
@@ -114,13 +114,20 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     const geometry = new THREE.IcosahedronGeometry(1, 10);
 
     new EXRLoader().load(
-      'applet:piz_compressed.exr',
+      '/piz_compressed.exr',
       (texture: THREE.Texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         const exrCubeRenderTarget = pmremGenerator.fromEquirectangular(texture);
         sphereMaterial.envMap = exrCubeRenderTarget.texture;
         sphere.visible = true;
       },
+      (xhr: ProgressEvent) => {
+        console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+      },
+      (error: ErrorEvent) => {
+        console.error('Error loading texture:', error);
+        sphere.visible = true;
+      }
     );
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -134,7 +141,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       emissiveIntensity: 1.5,
     });
 
-    sphereMaterial.onBeforeCompile = (shader) => {
+    sphereMaterial.onBeforeCompile = (shader: any) => {
       shader.uniforms.time = {value: 0};
       shader.uniforms.inputData = {value: new THREE.Vector4()};
       shader.uniforms.outputData = {value: new THREE.Vector4()};
@@ -146,7 +153,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
     const sphere = new THREE.Mesh(geometry, sphereMaterial);
     scene.add(sphere);
-    sphere.visible = false;
+    sphere.visible = true;
 
     this.sphere = sphere;
 
